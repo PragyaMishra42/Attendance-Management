@@ -38,6 +38,7 @@ This repository includes `render.yaml`, which defines a Next.js web service and 
 
    ```powershell
    $env:DATABASE_URL = "paste-the-Render-external-PostgreSQL-URL-here"
+   $env:DATABASE_URL_POOLED = $env:DATABASE_URL
    npm run db:push
    $env:SEED_ADMIN_PASSWORD = "choose-a-strong-admin-password"
    $env:SEED_TEACHER_PASSWORD = "choose-a-strong-teacher-password"
@@ -51,6 +52,10 @@ This repository includes `render.yaml`, which defines a Next.js web service and 
 The Blueprint uses Render's free web and database plans to make a trial deployment possible. Free web services can spin down while idle, and free PostgreSQL databases expire after 30 days; upgrade the database before relying on it for long-term attendance records. See [Render's free instance limits](https://render.com/docs/free).
 
 The app requires PostgreSQL at runtime; production API routes report persistence failures instead of pretending mock writes succeeded. Optional face-recognition integration can be configured with `FACE_RECOGNITION_API_URL` and `FACE_RECOGNITION_API_KEY`. Without them, the app uses its clearly labeled mock identification service.
+
+## Vercel database variables
+
+The Prisma Postgres integration provides separate direct and pooled connection strings. This app uses `DATABASE_URL` (direct) for Prisma CLI operations and `DATABASE_URL_POOLED` for runtime queries. If the integration added prefixed names such as `SMARTATTEND_DATABASE_URL` and `SMARTATTEND_DATABASE_URL_POOLED`, add the unprefixed variables in the Vercel project and copy the matching values: direct to `DATABASE_URL`, pooled to `DATABASE_URL_POOLED`. Set both for Production, then redeploy. Never use `localhost` in Vercel.
 
 Optional face-recognition integration can be configured with `FACE_RECOGNITION_API_URL` and `FACE_RECOGNITION_API_KEY`. Without them, the app uses its clearly labeled mock identification service.
 

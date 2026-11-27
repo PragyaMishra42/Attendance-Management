@@ -13,6 +13,10 @@ services:
         fromDatabase:
           name: smartattend-db
           property: connectionString
+      - key: DATABASE_URL_POOLED
+        fromDatabase:
+          name: smartattend-db
+          property: connectionString
       - key: AUTH_SECRET
         generateValue: true
       - key: NODE_ENV
