@@ -28,19 +28,29 @@ SmartAttend is an offline-first school attendance PWA built with Next.js 15, Rea
 
 Local demo credentials: `priya.sharma@smartattend.edu` / `password123` and `admin@smartattend.edu` / `admin123`. Demo login fallback is disabled in production.
 
-## Deploy to Vercel
+## Deploy to Render
 
-1. Push this project to GitHub and import the repository in Vercel. Vercel detects Next.js automatically; use `npm run build` as the build command.
-2. Create a hosted PostgreSQL database and add `DATABASE_URL` to the Vercel project environment variables. Use the provider's recommended connection URL for serverless deployments. Add it to the Production environment (and Preview if previews need a database).
-3. Generate a unique authentication secret and set it as `AUTH_SECRET` in Vercel. For example, run `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"` locally. Keep `.env` out of Git and never reuse the example value.
-4. Apply the Prisma schema to the hosted database from a trusted local terminal with the production `DATABASE_URL` configured:
+This repository includes `render.yaml`, which defines a Next.js web service and a PostgreSQL database in the Singapore region. To create them together:
 
-   ```bash
+1. Push the repository to GitHub and choose **New → Blueprint** in Render. Connect `PragyaMishra42/Attendance-Management` and select the `main` branch.
+2. Review the resources and deploy the Blueprint. Render sets `DATABASE_URL` from the database's internal connection string and generates `AUTH_SECRET` automatically. The web service runs `npm ci && npm run build`, then `npm start`.
+3. After the database is created, apply the schema and seed the demo records from your local project folder using the database's **external** connection URL from Render's **Connect** menu:
+
+   ```powershell
+   $env:DATABASE_URL = "paste-the-Render-external-PostgreSQL-URL-here"
    npm run db:push
+   $env:SEED_ADMIN_PASSWORD = "choose-a-strong-admin-password"
+   $env:SEED_TEACHER_PASSWORD = "choose-a-strong-teacher-password"
+   npm run db:seed
+   Remove-Item Env:DATABASE_URL, Env:SEED_ADMIN_PASSWORD, Env:SEED_TEACHER_PASSWORD
    ```
 
-5. Optionally seed sample data. Set strong, unique `SEED_ADMIN_PASSWORD` and `SEED_TEACHER_PASSWORD` values in that terminal before running `npm run db:seed`. Production seeding refuses to use the public demo passwords. Remove these seed variables from Vercel after seeding if they are not otherwise needed.
-6. Deploy from Vercel. The build generates the Prisma client before building Next.js. The app requires a reachable PostgreSQL database at runtime; production API routes return an error if persistence is unavailable rather than reporting mock writes as successful.
+   Do not use the local `localhost` URL for this step. Keep the connection URL and seed passwords private. Sign in with the seeded teacher (`priya.sharma@smartattend.edu`) or administrator (`admin@smartattend.edu`) email and the password you chose above.
+4. Open the web service URL shown in Render. Its `/api/health` endpoint checks database connectivity and is configured as the service health check.
+
+The Blueprint uses Render's free web and database plans to make a trial deployment possible. Free web services can spin down while idle, and free PostgreSQL databases expire after 30 days; upgrade the database before relying on it for long-term attendance records. See [Render's free instance limits](https://render.com/docs/free).
+
+The app requires PostgreSQL at runtime; production API routes report persistence failures instead of pretending mock writes succeeded. Optional face-recognition integration can be configured with `FACE_RECOGNITION_API_URL` and `FACE_RECOGNITION_API_KEY`. Without them, the app uses its clearly labeled mock identification service.
 
 Optional face-recognition integration can be configured with `FACE_RECOGNITION_API_URL` and `FACE_RECOGNITION_API_KEY`. Without them, the app uses its clearly labeled mock identification service.
 
