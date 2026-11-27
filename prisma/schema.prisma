@@ -1,0 +1,251 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  TEACHER
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  UNVERIFIED
+}
+
+enum IdentificationMethod {
+  MANUAL
+  AI_ASSISTED
+}
+
+enum VerificationStatus {
+  VERIFIED
+  PENDING_REVIEW
+  MANUAL_OVERRIDE
+}
+
+enum SyncStatus {
+  SYNCED
+  PENDING
+  SYNCING
+  FAILED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         UserRole @default(TEACHER)
+  avatarUrl    String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  teacher Teacher?
+
+  @@index([email])
+  @@index([role])
+}
+
+model Teacher {
+  id         String   @id @default(cuid())
+  userId     String   @unique
+  employeeId String   @unique
+  department String
+  phone      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user        User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subjects    Subject[]
+  attendances Attendance[]
+  sessions    AttendanceSession[]
+
+  @@index([employeeId])
+}
+
+model Class {
+  id           String   @id @default(cuid())
+  name         String
+  gradeLevel   String
+  academicYear String   @default("2026-2027")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sections    Section[]
+  students    Student[]
+  subjects    Subject[]
+  attendances Attendance[]
+  sessions    AttendanceSession[]
+
+  @@unique([name, academicYear])
+}
+
+model Section {
+  id         String   @id @default(cuid())
+  name       String
+  classId    String
+  roomNumber String?
+  capacity   Int      @default(40)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  class       Class               @relation(fields: [classId], references: [id], onDelete: Cascade)
+  students    Student[]
+  attendances Attendance[]
+  sessions    AttendanceSession[]
+
+  @@unique([classId, name])
+  @@index([classId])
+}
+
+model Subject {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  classId   String
+  teacherId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  class       Class               @relation(fields: [classId], references: [id], onDelete: Cascade)
+  teacher     Teacher             @relation(fields: [teacherId], references: [id], onDelete: Restrict)
+  attendances Attendance[]
+  sessions    AttendanceSession[]
+
+  @@index([classId])
+  @@index([teacherId])
+}
+
+model Student {
+  id               String    @id @default(cuid())
+  studentCode      String    @unique
+  name             String
+  rollNumber       String
+  classId          String
+  sectionId        String
+  photoUrl         String?
+  guardianName     String?
+  guardianContact  String?
+  guardianConsent  Boolean   @default(false)
+  consentDate      DateTime?
+  retentionUntil   DateTime?
+  isActive         Boolean   @default(true)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  class       Class        @relation(fields: [classId], references: [id], onDelete: Restrict)
+  section     Section      @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  attendances Attendance[]
+
+  @@unique([classId, sectionId, rollNumber])
+  @@index([studentCode])
+  @@index([classId, sectionId])
+  @@index([name])
+}
+
+model AttendanceSession {
+  id              String     @id @default(cuid())
+  clientSessionId String     @unique
+  classId         String
+  sectionId       String
+  subjectId       String
+  teacherId       String
+  date            DateTime
+  startedAt       DateTime   @default(now())
+  completedAt     DateTime?
+  totalStudents   Int        @default(0)
+  presentCount    Int        @default(0)
+  absentCount     Int        @default(0)
+  lateCount       Int        @default(0)
+  syncStatus      SyncStatus @default(SYNCED)
+  syncedAt        DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  class       Class           @relation(fields: [classId], references: [id], onDelete: Restrict)
+  section     Section         @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  subject     Subject         @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  teacher     Teacher         @relation(fields: [teacherId], references: [id], onDelete: Restrict)
+  attendances Attendance[]
+  photos      CapturedPhoto[]
+
+  @@index([date])
+  @@index([classId, sectionId, date])
+  @@index([teacherId])
+}
+
+model Attendance {
+  id                   String               @id @default(cuid())
+  clientMutationId     String               @unique
+  studentId            String
+  classId              String
+  sectionId            String
+  teacherId            String
+  subjectId            String
+  sessionId            String?
+  date                 DateTime
+  status               AttendanceStatus
+  identificationMethod IdentificationMethod @default(MANUAL)
+  verificationStatus   VerificationStatus   @default(VERIFIED)
+  aiConfidence         Float?
+  syncStatus           SyncStatus           @default(SYNCED)
+  syncedAt             DateTime?
+  deviceTimestamp      DateTime?
+  notes                String?
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+
+  student Student            @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class   Class              @relation(fields: [classId], references: [id], onDelete: Restrict)
+  section Section            @relation(fields: [sectionId], references: [id], onDelete: Restrict)
+  teacher Teacher            @relation(fields: [teacherId], references: [id], onDelete: Restrict)
+  subject Subject            @relation(fields: [subjectId], references: [id], onDelete: Restrict)
+  session AttendanceSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, subjectId, date])
+  @@index([date])
+  @@index([studentId])
+  @@index([classId, sectionId])
+  @@index([syncStatus])
+}
+
+model CapturedPhoto {
+  id                 String    @id @default(cuid())
+  sessionId          String
+  imageUrl           String
+  mimeType           String    @default("image/jpeg")
+  facesDetected      Int       @default(0)
+  processedAt        DateTime?
+  retentionExpiresAt DateTime?
+  createdAt          DateTime  @default(now())
+
+  session AttendanceSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([retentionExpiresAt])
+}
+
+model SyncLog {
+  id               String     @id @default(cuid())
+  clientMutationId String
+  entityType       String
+  entityId         String
+  action           String
+  status           SyncStatus
+  attempts         Int        @default(1)
+  errorMessage     String?
+  syncedAt         DateTime?
+  createdAt        DateTime   @default(now())
+
+  @@index([clientMutationId])
+  @@index([status])
+  @@index([createdAt])
+}
