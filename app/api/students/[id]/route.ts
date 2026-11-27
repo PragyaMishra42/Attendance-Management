@@ -1,85 +1,31 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getSupabaseAdmin } from "@/lib/supabase";
 
-export async function PATCH(
-  request: Request,
-  context: { params: Promise<{ id: string }> }
-) {
-  const session = await getServerSession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
+  if (!(await getServerSession())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await context.params;
   const body = await request.json();
-
+  const changes: Record<string, unknown> = {};
+  for (const [apiKey, dbKey] of [["name", "name"], ["rollNumber", "roll_number"], ["classId", "class_id"], ["sectionId", "section_id"], ["photoUrl", "photo_url"], ["guardianName", "guardian_name"], ["guardianContact", "guardian_contact"], ["guardianConsent", "guardian_consent"]]) {
+    if (body[apiKey] !== undefined) changes[dbKey] = body[apiKey];
+  }
+  if (body.guardianConsent === true) changes.consent_date = new Date().toISOString();
+  if (body.guardianConsent === false) { changes.consent_date = null; changes.retention_until = null; }
   try {
-    const updated = await prisma.student.update({
-      where: { id },
-      data: {
-        name: body.name,
-        rollNumber: body.rollNumber,
-        classId: body.classId,
-        sectionId: body.sectionId,
-        photoUrl: body.photoUrl,
-        guardianName: body.guardianName,
-        guardianContact: body.guardianContact,
-        guardianConsent:
-          typeof body.guardianConsent === "boolean" ? body.guardianConsent : undefined,
-        consentDate:
-          body.guardianConsent === true ? new Date() : body.guardianConsent === false ? null : undefined,
-      },
-      include: { class: true, section: true },
-    });
-
-    return NextResponse.json({
-      student: {
-        id: updated.id,
-        studentCode: updated.studentCode,
-        name: updated.name,
-        rollNumber: updated.rollNumber,
-        classId: updated.classId,
-        className: updated.class.name,
-        sectionId: updated.sectionId,
-        sectionName: updated.section.name,
-        photoUrl: updated.photoUrl,
-        guardianName: updated.guardianName,
-        guardianContact: updated.guardianContact,
-        guardianConsent: updated.guardianConsent,
-        isActive: updated.isActive,
-      },
-    });
+    const { data, error } = await getSupabaseAdmin().from("students").update(changes).eq("id", id).select("*, classes(name), sections(name)").single();
+    if (error) throw error;
+    return NextResponse.json({ student: { id: data.id, studentCode: data.student_code, name: data.name, rollNumber: data.roll_number, classId: data.class_id, className: data.classes?.name ?? "", sectionId: data.section_id, sectionName: data.sections?.name ?? "", photoUrl: data.photo_url, guardianName: data.guardian_name, guardianContact: data.guardian_contact, guardianConsent: data.guardian_consent, consentDate: data.consent_date, retentionUntil: data.retention_until, isActive: data.is_active } });
   } catch (error) {
     console.error("Update student error:", error);
-    if (process.env.NODE_ENV === "production") {
-      return NextResponse.json({ error: "Student service is unavailable." }, { status: 503 });
-    }
-
-    return NextResponse.json({ student: { id, ...body }, demoMode: true });
+    return NextResponse.json({ error: "Student could not be updated." }, { status: 503 });
   }
 }
 
-export async function DELETE(
-  _request: Request,
-  context: { params: Promise<{ id: string }> }
-) {
-  const session = await getServerSession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export async function DELETE(_request: Request, context: { params: Promise<{ id: string }> }) {
+  if (!(await getServerSession())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const { id } = await context.params;
-
-  try {
-    await prisma.student.delete({ where: { id } });
-    return NextResponse.json({ deleted: true, id });
-  } catch (error) {
-    console.error("Delete student error:", error);
-    if (process.env.NODE_ENV === "production") {
-      return NextResponse.json({ error: "Student service is unavailable." }, { status: 503 });
-    }
-
-    return NextResponse.json({ deleted: true, id, demoMode: true });
-  }
+  const { error } = await getSupabaseAdmin().from("students").delete().eq("id", id);
+  if (error) return NextResponse.json({ error: "Student could not be deleted." }, { status: 503 });
+  return NextResponse.json({ deleted: true, id });
 }

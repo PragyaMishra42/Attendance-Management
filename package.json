@@ -4,19 +4,16 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "postinstall": "prisma generate",
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:seed": "npx tsx prisma/seed.ts"
+    "db:seed": "tsx supabase/seed.ts"
   },
   "engines": {
     "node": "22.x"
   },
   "dependencies": {
-    "@prisma/client": "^6.5.0",
+    "@supabase/supabase-js": "^2.57.0",
     "bcryptjs": "^3.0.2",
     "clsx": "^2.1.1",
     "dexie": "^4.0.11",
@@ -35,7 +32,6 @@
     "@types/react-dom": "^19.0.4",
     "eslint": "^9.23.0",
     "eslint-config-next": "^15.2.4",
-    "prisma": "^6.5.0",
     "tailwindcss": "^4.0.17",
     "tsx": "^4.19.3"
   }
