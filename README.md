@@ -5,7 +5,7 @@ SmartAttend is an offline-first school attendance PWA built with Next.js 15, Rea
 ## Run locally
 
 1. Install Node.js 20.9 or newer.
-2. Copy `.env.example` to `.env` and set a local PostgreSQL `DATABASE_URL`. For local demo mode, the built-in demo accounts are available when PostgreSQL is unavailable.
+2. Copy `.env.example` to `.env` and set both `DATABASE_URL` and `DATABASE_URL_POOLED` to your local PostgreSQL URL. A local database can use the same URL for both. For local demo mode, built-in demo sign-in is available when PostgreSQL is unavailable.
 3. Install dependencies and generate the Prisma client:
 
    ```bash
@@ -55,7 +55,9 @@ The app requires PostgreSQL at runtime; production API routes report persistence
 
 ## Vercel database variables
 
-The Prisma Postgres integration provides separate direct and pooled connection strings. This app uses `DATABASE_URL` (direct) for Prisma CLI operations and `DATABASE_URL_POOLED` for runtime queries. If the integration added prefixed names such as `SMARTATTEND_DATABASE_URL` and `SMARTATTEND_DATABASE_URL_POOLED`, add the unprefixed variables in the Vercel project and copy the matching values: direct to `DATABASE_URL`, pooled to `DATABASE_URL_POOLED`. Set both for Production, then redeploy. Never use `localhost` in Vercel.
+The Prisma Postgres integration provides separate direct and pooled connection strings. Prisma CLI operations use `DATABASE_URL` (direct). App requests prefer `DATABASE_URL_POOLED` and also recognize the integration's `SMARTATTEND_DATABASE_URL_POOLED`; they fall back to `DATABASE_URL` if no pooled value is configured. Keep `DATABASE_URL` set to the integration's direct URL and redeploy. Never use `localhost` in Vercel.
+
+Apply the Prisma schema to the connected database with `npm run db:push`, then seed accounts with strong `SEED_ADMIN_PASSWORD` and `SEED_TEACHER_PASSWORD` values using `npm run db:seed`. For local commands, set `DATABASE_URL` to the provider's direct URL and optionally `DATABASE_URL_POOLED` to its pooled URL in the same PowerShell session first. Do not paste database URLs or passwords into chat or commit them to Git.
 
 Optional face-recognition integration can be configured with `FACE_RECOGNITION_API_URL` and `FACE_RECOGNITION_API_KEY`. Without them, the app uses its clearly labeled mock identification service.
 
