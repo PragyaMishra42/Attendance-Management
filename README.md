@@ -5,7 +5,7 @@ SmartAttend is an offline-first school attendance PWA built with Next.js 15, Rea
 ## Run locally
 
 1. Install Node.js 20.9 or newer.
-2. Copy `.env.example` to `.env` and set both `DATABASE_URL` and `DATABASE_URL_POOLED` to your local PostgreSQL URL. A local database can use the same URL for both. For local demo mode, built-in demo sign-in is available when PostgreSQL is unavailable.
+2. Copy `.env.example` to `.env` and set both `DATABASE_URL` and `DATABASE_URL_POOLED` to your local PostgreSQL URL. A local database can use the same URL for both. If port `5432` is already in use, set `POSTGRES_HOST_PORT` and both local URLs to another free port, such as `5433`. For local demo mode, built-in demo sign-in is available when PostgreSQL is unavailable.
 3. Install dependencies and generate the Prisma client:
 
    ```bash
