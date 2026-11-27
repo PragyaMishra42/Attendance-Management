@@ -9,11 +9,11 @@ services:
     startCommand: npm start
     healthCheckPath: /api/health
     envVars:
-      - key: DATABASE_URL
+      - key: POSTGRES_PRISMA_URL
         fromDatabase:
           name: smartattend-db
           property: connectionString
-      - key: DATABASE_URL_POOLED
+      - key: POSTGRES_URL_NON_POOLING
         fromDatabase:
           name: smartattend-db
           property: connectionString
